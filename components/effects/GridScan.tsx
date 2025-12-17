@@ -2,7 +2,10 @@
 
 import { useEffect, useRef } from 'react';
 import { EffectComposer, RenderPass, EffectPass, BloomEffect, ChromaticAberrationEffect } from 'postprocessing';
-import * as THREE from 'three';
+import { 
+    WebGLRenderer, ShaderMaterial, Vector2, Vector3, MathUtils, SRGBColorSpace, 
+    NoToneMapping, Scene, OrthographicCamera, Mesh, PlaneGeometry, Color 
+} from 'three';
 import './GridScan.css';
 
 const vert = `
@@ -327,19 +330,19 @@ export const GridScan: React.FC<GridScanProps> = ({
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-    const materialRef = useRef<THREE.ShaderMaterial | null>(null);
+    const rendererRef = useRef<WebGLRenderer | null>(null);
+    const materialRef = useRef<ShaderMaterial | null>(null);
     const composerRef = useRef<EffectComposer | null>(null);
     const bloomRef = useRef<BloomEffect | null>(null);
     const chromaRef = useRef<ChromaticAberrationEffect | null>(null);
     const rafRef = useRef<number | null>(null);
 
-    const lookTarget = useRef(new THREE.Vector2(0, 0));
+    const lookTarget = useRef(new Vector2(0, 0));
     const tiltTarget = useRef(0);
     const yawTarget = useRef(0);
 
-    const lookCurrent = useRef(new THREE.Vector2(0, 0));
-    const lookVel = useRef(new THREE.Vector2(0, 0));
+    const lookCurrent = useRef(new Vector2(0, 0));
+    const lookVel = useRef(new Vector2(0, 0));
     const tiltCurrent = useRef(0);
     const tiltVel = useRef(0);
     const yawCurrent = useRef(0);
@@ -362,14 +365,14 @@ export const GridScan: React.FC<GridScanProps> = ({
         }
     };
 
-    const s = THREE.MathUtils.clamp(sensitivity, 0, 1);
-    const skewScale = THREE.MathUtils.lerp(0.06, 0.2, s);
-    const tiltScale = THREE.MathUtils.lerp(0.12, 0.3, s);
-    const yawScale = THREE.MathUtils.lerp(0.1, 0.28, s);
-    const smoothTime = THREE.MathUtils.lerp(0.45, 0.12, s);
+    const s = MathUtils.clamp(sensitivity, 0, 1);
+    const skewScale = MathUtils.lerp(0.06, 0.2, s);
+    const tiltScale = MathUtils.lerp(0.12, 0.3, s);
+    const yawScale = MathUtils.lerp(0.1, 0.28, s);
+    const smoothTime = MathUtils.lerp(0.45, 0.12, s);
     const maxSpeed = Infinity;
 
-    const yBoost = THREE.MathUtils.lerp(1.2, 1.6, s);
+    const yBoost = MathUtils.lerp(1.2, 1.6, s);
 
     useEffect(() => {
         const el = containerRef.current;
@@ -416,7 +419,7 @@ export const GridScan: React.FC<GridScanProps> = ({
                     yawTarget.current = 0;
                 },
                 Math.max(0, snapBackDelay || 0)
-            );
+        );
         };
         el.addEventListener('mousemove', onMove);
         el.addEventListener('mouseenter', onEnter);
@@ -435,22 +438,22 @@ export const GridScan: React.FC<GridScanProps> = ({
         const container = containerRef.current;
         if (!container) return;
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        const renderer = new WebGLRenderer({ antialias: true, alpha: true });
         rendererRef.current = renderer;
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
         renderer.setSize(container.clientWidth, container.clientHeight);
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
-        renderer.toneMapping = THREE.NoToneMapping;
+        renderer.outputColorSpace = SRGBColorSpace;
+        renderer.toneMapping = NoToneMapping;
         renderer.autoClear = false;
         renderer.setClearColor(0x000000, 0);
         container.appendChild(renderer.domElement);
 
         const uniforms = {
             iResolution: {
-                value: new THREE.Vector3(container.clientWidth, container.clientHeight, renderer.getPixelRatio())
+                value: new Vector3(container.clientWidth, container.clientHeight, renderer.getPixelRatio())
             },
             iTime: { value: 0 },
-            uSkew: { value: new THREE.Vector2(0, 0) },
+            uSkew: { value: new Vector2(0, 0) },
             uTilt: { value: 0 },
             uYaw: { value: 0 },
             uLineThickness: { value: lineThickness },
@@ -472,7 +475,7 @@ export const GridScan: React.FC<GridScanProps> = ({
             uScanCount: { value: 0 }
         };
 
-        const material = new THREE.ShaderMaterial({
+        const material = new ShaderMaterial({
             uniforms,
             vertexShader: vert,
             fragmentShader: frag,
@@ -482,9 +485,9 @@ export const GridScan: React.FC<GridScanProps> = ({
         });
         materialRef.current = material;
 
-        const scene = new THREE.Scene();
-        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-        const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+        const scene = new Scene();
+        const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
+        const quad = new Mesh(new PlaneGeometry(2, 2), material);
         scene.add(quad);
 
         let composer: EffectComposer | null = null;
@@ -503,7 +506,7 @@ export const GridScan: React.FC<GridScanProps> = ({
             bloomRef.current = bloom;
 
             const chroma = new ChromaticAberrationEffect({
-                offset: new THREE.Vector2(chromaticAberration, chromaticAberration),
+                offset: new Vector2(chromaticAberration, chromaticAberration),
                 radialModulation: true,
                 modulationOffset: 0.0
             });
@@ -514,15 +517,17 @@ export const GridScan: React.FC<GridScanProps> = ({
             composer.addPass(effectPass);
         }
 
-        const onResize = () => {
-            if (container && renderer && material && composerRef.current) {
-                renderer.setSize(container.clientWidth, container.clientHeight);
-                material.uniforms.iResolution.value.set(container.clientWidth, container.clientHeight, renderer.getPixelRatio());
-                composerRef.current.setSize(container.clientWidth, container.clientHeight);
+        const onResize = (entries: ResizeObserverEntry[]) => {
+            const entry = entries[0];
+            if (entry && container && renderer && material && composerRef.current) {
+                const { width, height } = entry.contentRect;
+                renderer.setSize(width, height);
+                material.uniforms.iResolution.value.set(width, height, renderer.getPixelRatio());
+                composerRef.current.setSize(width, height);
             }
         };
 
-        const resizeObserver = new ResizeObserver(() => onResize());
+        const resizeObserver = new ResizeObserver((entries) => onResize(entries));
         resizeObserver.observe(container);
 
         let last = performance.now();
@@ -557,10 +562,10 @@ export const GridScan: React.FC<GridScanProps> = ({
             yawCurrent.current = yawSm.value;
             yawVel.current = yawSm.v;
 
-            const skew = new THREE.Vector2(lookCurrent.current.x * skewScale, -lookCurrent.current.y * yBoost * skewScale);
+            const skew = new Vector2(lookCurrent.current.x * skewScale, -lookCurrent.current.y * yBoost * skewScale);
             material.uniforms.uSkew.value.set(skew.x, skew.y);
             material.uniforms.uTilt.value = tiltCurrent.current * tiltScale;
-            material.uniforms.uYaw.value = THREE.MathUtils.clamp(yawCurrent.current * yawScale, -0.6, 0.6);
+            material.uniforms.uYaw.value = MathUtils.clamp(yawCurrent.current * yawScale, -0.6, 0.6);
 
             material.uniforms.iTime.value = now / 1000;
             renderer.clear(true, true, true);
@@ -669,10 +674,10 @@ export const GridScan: React.FC<GridScanProps> = ({
         const handler = (e: any) => {
             const gamma = e.gamma ?? 0;
             const beta = e.beta ?? 0;
-            const nx = THREE.MathUtils.clamp(gamma / 45, -1, 1);
-            const ny = THREE.MathUtils.clamp(-beta / 30, -1, 1);
+            const nx = MathUtils.clamp(gamma / 45, -1, 1);
+            const ny = MathUtils.clamp(-beta / 30, -1, 1);
             lookTarget.current.set(nx, ny);
-            tiltTarget.current = THREE.MathUtils.degToRad(gamma) * 0.4;
+            tiltTarget.current = MathUtils.degToRad(gamma) * 0.4;
         };
         window.addEventListener('deviceorientation', handler);
         return () => {
@@ -686,11 +691,11 @@ export const GridScan: React.FC<GridScanProps> = ({
 };
 
 function srgbColor(hex: string) {
-    const c = new THREE.Color(hex);
+    const c = new Color(hex);
     return c.convertSRGBToLinear();
 }
 
-function smoothDampVec2(current: THREE.Vector2, target: THREE.Vector2, currentVelocity: THREE.Vector2, smoothTime: number, maxSpeed: number, deltaTime: number) {
+function smoothDampVec2(current: Vector2, target: Vector2, currentVelocity: Vector2, smoothTime: number, maxSpeed: number, deltaTime: number) {
     const out = current.clone();
     smoothTime = Math.max(0.0001, smoothTime);
     const omega = 2 / smoothTime;
@@ -745,4 +750,3 @@ function smoothDampFloat(current: number, target: number, velRef: { v: number },
     }
     return { value: out, v: velRef.v };
 }
-

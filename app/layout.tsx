@@ -3,7 +3,7 @@ import { Alfa_Slab_One, Roboto } from "next/font/google";
 import "./globals.css";
 import { NoiseOverlay } from "@/components/layout/NoiseOverlay";
 import { SmoothScroll } from "@/components/layout/SmoothScroll";
-import { Preloader } from "@/components/layout/Preloader";
+import { ClientPreloader } from "@/components/layout/ClientPreloader";
 
 const alfaSlabOne = Alfa_Slab_One({
   variable: "--font-alfa",
@@ -39,7 +39,7 @@ export default function RootLayout({
         className={`${alfaSlabOne.variable} ${roboto.variable} antialiased bg-black`}
       >
         <SmoothScroll>
-          <Preloader />
+          <ClientPreloader />
           <NoiseOverlay />
           {children}
         </SmoothScroll>

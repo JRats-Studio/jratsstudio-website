@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useEffect, useRef } from 'react';
-import * as THREE from 'three';
+import { 
+    WebGLRenderer, SRGBColorSpace, Scene, OrthographicCamera, BufferGeometry, 
+    BufferAttribute, Vector3, Vector4, RawShaderMaterial, NormalBlending, Mesh, 
+    Clock, Vector2
+} from 'three';
 
 type Props = {
     className?: string;
@@ -287,7 +291,7 @@ export const LaserFlow: React.FC<Props> = ({
     isLoaded = false
 }) => {
     const mountRef = useRef<HTMLDivElement | null>(null);
-    const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+    const rendererRef = useRef<WebGLRenderer | null>(null);
     const uniformsRef = useRef<any>(null);
     const hasFadedRef = useRef(false);
     const rectRef = useRef<DOMRect | null>(null);
@@ -314,7 +318,7 @@ export const LaserFlow: React.FC<Props> = ({
 
     useEffect(() => {
         const mount = mountRef.current!;
-        const renderer = new THREE.WebGLRenderer({
+        const renderer = new WebGLRenderer({
             antialias: false,
             alpha: false,
             depth: false,
@@ -332,7 +336,7 @@ export const LaserFlow: React.FC<Props> = ({
 
         renderer.setPixelRatio(currentDprRef.current);
         renderer.shadowMap.enabled = false;
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        renderer.outputColorSpace = SRGBColorSpace;
         renderer.setClearColor(0x000000, 1);
         const canvas = renderer.domElement;
         canvas.style.width = '100%';
@@ -340,16 +344,16 @@ export const LaserFlow: React.FC<Props> = ({
         canvas.style.display = 'block';
         mount.appendChild(canvas);
 
-        const scene = new THREE.Scene();
-        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+        const scene = new Scene();
+        const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3));
+        const geometry = new BufferGeometry();
+        geometry.setAttribute('position', new BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3));
 
         const uniforms = {
             iTime: { value: 0 },
-            iResolution: { value: new THREE.Vector3(1, 1, 1) },
-            iMouse: { value: new THREE.Vector4(0, 0, 0, 0) },
+            iResolution: { value: new Vector3(1, 1, 1) },
+            iMouse: { value: new Vector4(0, 0, 0, 0) },
             uWispDensity: { value: wispDensity },
             uTiltScale: { value: mouseTiltStrength },
             uFlowTime: { value: 0 },
@@ -367,37 +371,39 @@ export const LaserFlow: React.FC<Props> = ({
             uDecay: { value: decay },
             uFalloffStart: { value: falloffStart },
             uFogFallSpeed: { value: fogFallSpeed },
-            uColor: { value: new THREE.Vector3(1, 1, 1) },
+            uColor: { value: new Vector3(1, 1, 1) },
             uFade: { value: hasFadedRef.current ? 1 : 0 }
         };
         uniformsRef.current = uniforms;
 
-        const material = new THREE.RawShaderMaterial({
+        const material = new RawShaderMaterial({
             vertexShader: VERT,
             fragmentShader: FRAG,
             uniforms,
             transparent: false,
             depthTest: false,
             depthWrite: false,
-            blending: THREE.NormalBlending
+            blending: NormalBlending
         });
 
-        const mesh = new THREE.Mesh(geometry, material);
+        const mesh = new Mesh(geometry, material);
         mesh.frustumCulled = false;
         scene.add(mesh);
 
-        const clock = new THREE.Clock();
+        const clock = new Clock();
         let prevTime = 0;
         let fade = hasFadedRef.current ? 1 : 0;
 
-        const mouseTarget = new THREE.Vector2(0, 0);
-        const mouseSmooth = new THREE.Vector2(0, 0);
+        const mouseTarget = new Vector2(0, 0);
+        const mouseSmooth = new Vector2(0, 0);
 
     let cachedSize = { width: 0, height: 0 };
 
     const setSizeNow = (width?: number, height?: number) => {
-        const w = width ?? (cachedSize.width || mount.clientWidth || 1);
-        const h = height ?? (cachedSize.height || mount.clientHeight || 1);
+        // Optimization: Rely on ResizeObserver/cached args to avoid reflow.
+        // If args missing, fallback to cached. If no cached, skip (or assume 0).
+        const w = width ?? (cachedSize.width || 1);
+        const h = height ?? (cachedSize.height || 1);
         const pr = currentDprRef.current;
 
         const last = lastSizeRef.current;
@@ -411,6 +417,19 @@ export const LaserFlow: React.FC<Props> = ({
         renderer.setPixelRatio(pr);
         renderer.setSize(w, h, false);
         uniforms.iResolution.value.set(w * pr, h * pr, pr);
+        
+        // Cache rect for mouse coords - using calculated size to avoid getBoundingClientRect()
+        // Note: this assumes canvas is at expected position. If layout shifts, this might be stale.
+        // But preventing reflow is critical.
+        // We update rect from entries? No, RectRef uses left/top which needs getBoundingClientRect or layout read.
+        // For perf, we can delay this or do it once.
+        // The original code did `rectRef.current = canvas.getBoundingClientRect();` which forces reflow.
+        // We can move this to `onResize` if `entry.contentRect` isn't enough (it gives x/y relative to parent content box).
+        // `getBoundingClientRect` gives viewport relative.
+        // We will call it only on resize.
+        // And `onResize` isn't calling it.
+        // We'll call it here but maybe debounce it?
+        // Or accepts the cost during resize. It's better than during animation loop (which it wasn't).
         rectRef.current = canvas.getBoundingClientRect();
 
         if (!pausedRef.current && renderer && scene && camera) {
@@ -430,8 +449,8 @@ export const LaserFlow: React.FC<Props> = ({
     const ro = new ResizeObserver(onResize);
     ro.observe(mount);
     
-    // Initial call
-    setSizeNow();
+    // Removed synchronous setSizeNow() call here to avoid initial mount reflow. 
+    // ResizeObserver fires shortly after mount.
 
     const io = new IntersectionObserver(
         entries => {

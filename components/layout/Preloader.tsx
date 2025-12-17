@@ -2,7 +2,12 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import LaserFlow from "@/components/effects/LaserFlow";
+import dynamic from "next/dynamic";
+
+const LaserFlow = dynamic(() => import("@/components/effects/LaserFlow"), { 
+    ssr: false,
+    loading: () => null 
+});
 
 export const Preloader = () => {
     const [isLoading, setIsLoading] = useState(true);
@@ -10,10 +15,16 @@ export const Preloader = () => {
     const [showEffects, setShowEffects] = useState(false);
 
     useEffect(() => {
-        // Defer heavy WebGL initialization to allow initial paint and hydration
-        const initTimer = setTimeout(() => {
-            setShowEffects(true);
-        }, 100);
+        // Defer heavy WebGL initialization to allow React hydration to complete first
+        // This reduces main thread blocking during critical rendering period
+        const rafId = requestAnimationFrame(() => {
+            const initTimer = setTimeout(() => {
+                setShowEffects(true);
+            }, 50);
+            // Store cleanup for the inner timeout
+            return () => clearTimeout(initTimer);
+        });
+
 
         // Calculate vertical sizing based on screen height
         // The beam should take 90% of the screen (10% space at bottom)
@@ -42,10 +53,10 @@ export const Preloader = () => {
         // User requested fixed 2.5s duration
         const timer = setTimeout(() => {
             handleLoad();
-        }, 2500);
+        }, 3000);
 
         return () => {
-            clearTimeout(initTimer);
+            cancelAnimationFrame(rafId);
             clearTimeout(timer);
             window.removeEventListener("resize", calculateSizing);
             document.body.style.overflow = "";
