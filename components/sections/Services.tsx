@@ -1,9 +1,14 @@
 "use client";
 
 import { motion, useScroll, useTransform, useInView, MotionValue } from "framer-motion";
-import { useRef } from "react";
-import PixelBlast from "@/components/effects/PixelBlast";
+import { useRef, useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { BrainCircuit, Terminal, Video, Database, Check } from "lucide-react";
+
+const PixelBlast = dynamic(() => import("@/components/effects/PixelBlast"), {
+    ssr: false,
+    loading: () => <div className="absolute inset-0 bg-transparent" />,
+});
 
 const services = [
     {
@@ -134,31 +139,49 @@ export const Services = () => {
     const { scrollYProgress } = useScroll({
         target: container,
         offset: ['start start', 'end end']
-    })
+    });
+
+    const [showEffects, setShowEffects] = useState(false);
+    
+    // Only load PixelBlast when the section comes into view
+    // This removes the heavy initialization from the initial page load entirely
+    const isInView = useInView(container, { margin: "0px 0px 200px 0px", once: true });
+
+    useEffect(() => {
+        if (isInView) {
+            // Add a small delay even after view to prioritize smooth scrolling
+            const timer = setTimeout(() => {
+                setShowEffects(true);
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [isInView]);
 
     return (
         <section ref={container} className="relative bg-black pt-20 pb-20">
             {/* PixelBlast Background */}
             <div className="absolute inset-0 z-0">
-                <PixelBlast
-                    variant="circle"
-                    pixelSize={6}
-                    color="#08cb00"
-                    patternScale={3}
-                    patternDensity={1.2}
-                    pixelSizeJitter={0.5}
-                    enableRipples
-                    rippleSpeed={0.4}
-                    rippleThickness={0.12}
-                    rippleIntensityScale={1.5}
-                    liquid
-                    liquidStrength={0.12}
-                    liquidRadius={1.2}
-                    liquidWobbleSpeed={5}
-                    speed={0.6}
-                    edgeFade={0.25}
-                    transparent
-                />
+                {showEffects && (
+                    <PixelBlast
+                        variant="circle"
+                        pixelSize={6}
+                        color="#08cb00"
+                        patternScale={3}
+                        patternDensity={1.2}
+                        pixelSizeJitter={0.5}
+                        enableRipples
+                        rippleSpeed={0.4}
+                        rippleThickness={0.12}
+                        rippleIntensityScale={1.5}
+                        liquid
+                        liquidStrength={0.12}
+                        liquidRadius={1.2}
+                        liquidWobbleSpeed={5}
+                        speed={0.6}
+                        edgeFade={0.25}
+                        transparent
+                    />
+                )}
             </div>
 
             <div className="relative z-10 mb-16 sm:mb-24 md:mb-32 px-4 sm:px-6 md:px-8 max-w-[95vw] sm:max-w-[90vw] md:max-w-[1400px] mx-auto flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 md:gap-8">

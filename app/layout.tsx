@@ -9,12 +9,14 @@ const alfaSlabOne = Alfa_Slab_One({
   variable: "--font-alfa",
   subsets: ["latin"],
   weight: "400",
+  display: "swap",
 });
 
 const roboto = Roboto({
   variable: "--font-roboto",
   subsets: ["latin"],
   weight: ["400", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {

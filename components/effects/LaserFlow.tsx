@@ -393,76 +393,83 @@ export const LaserFlow: React.FC<Props> = ({
         const mouseTarget = new THREE.Vector2(0, 0);
         const mouseSmooth = new THREE.Vector2(0, 0);
 
-        const setSizeNow = () => {
-            const w = mount.clientWidth || 1;
-            const h = mount.clientHeight || 1;
-            const pr = currentDprRef.current;
+    let cachedSize = { width: 0, height: 0 };
 
-            const last = lastSizeRef.current;
-            const sizeChanged = Math.abs(w - last.width) > 0.5 || Math.abs(h - last.height) > 0.5;
-            const dprChanged = Math.abs(pr - last.dpr) > 0.01;
-            if (!sizeChanged && !dprChanged) {
-                return;
-            }
+    const setSizeNow = (width?: number, height?: number) => {
+        const w = width ?? (cachedSize.width || mount.clientWidth || 1);
+        const h = height ?? (cachedSize.height || mount.clientHeight || 1);
+        const pr = currentDprRef.current;
 
-            lastSizeRef.current = { width: w, height: h, dpr: pr };
-            renderer.setPixelRatio(pr);
-            renderer.setSize(w, h, false);
-            uniforms.iResolution.value.set(w * pr, h * pr, pr);
-            rectRef.current = canvas.getBoundingClientRect();
+        const last = lastSizeRef.current;
+        const sizeChanged = Math.abs(w - last.width) > 0.5 || Math.abs(h - last.height) > 0.5;
+        const dprChanged = Math.abs(pr - last.dpr) > 0.01;
+        if (!sizeChanged && !dprChanged) {
+            return;
+        }
 
-            if (!pausedRef.current && renderer && scene && camera) {
-                renderer.render(scene, camera);
-            }
-        };
+        lastSizeRef.current = { width: w, height: h, dpr: pr };
+        renderer.setPixelRatio(pr);
+        renderer.setSize(w, h, false);
+        uniforms.iResolution.value.set(w * pr, h * pr, pr);
+        rectRef.current = canvas.getBoundingClientRect();
 
-        let resizeRaf = 0;
-        const scheduleResize = () => {
-            if (resizeRaf) cancelAnimationFrame(resizeRaf);
-            resizeRaf = requestAnimationFrame(setSizeNow);
-        };
+        if (!pausedRef.current && renderer && scene && camera) {
+            renderer.render(scene, camera);
+        }
+    };
 
+    const onResize = (entries: ResizeObserverEntry[]) => {
+        const entry = entries[0];
+        if (entry) {
+            const { width, height } = entry.contentRect;
+            cachedSize = { width, height };
+            setSizeNow(width, height);
+        }
+    };
+
+    const ro = new ResizeObserver(onResize);
+    ro.observe(mount);
+    
+    // Initial call
+    setSizeNow();
+
+    const io = new IntersectionObserver(
+        entries => {
+            inViewRef.current = entries[0]?.isIntersecting ?? true;
+        },
+        { root: null, threshold: 0 }
+    );
+    io.observe(mount);
+
+    const onVis = () => {
+        pausedRef.current = document.hidden;
+    };
+    document.addEventListener('visibilitychange', onVis, { passive: true });
+
+    const updateMouse = (clientX: number, clientY: number) => {
+        const rect = rectRef.current;
+        if (!rect) return;
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+        const ratio = currentDprRef.current;
+        const hb = rect.height * ratio;
+        mouseTarget.set(x * ratio, hb - y * ratio);
+    };
+    const onMove = (ev: PointerEvent | MouseEvent) => updateMouse(ev.clientX, ev.clientY);
+    const onLeave = () => mouseTarget.set(0, 0);
+    canvas.addEventListener('pointermove', onMove as any, { passive: true });
+    canvas.addEventListener('pointerdown', onMove as any, { passive: true });
+    canvas.addEventListener('pointerenter', onMove as any, { passive: true });
+    canvas.addEventListener('pointerleave', onLeave as any, { passive: true });
+
+    const onCtxLost = (e: Event) => {
+        e.preventDefault();
+        pausedRef.current = true;
+    };
+    const onCtxRestored = () => {
+        pausedRef.current = false;
         setSizeNow();
-        const ro = new ResizeObserver(scheduleResize);
-        ro.observe(mount);
-
-        const io = new IntersectionObserver(
-            entries => {
-                inViewRef.current = entries[0]?.isIntersecting ?? true;
-            },
-            { root: null, threshold: 0 }
-        );
-        io.observe(mount);
-
-        const onVis = () => {
-            pausedRef.current = document.hidden;
-        };
-        document.addEventListener('visibilitychange', onVis, { passive: true });
-
-        const updateMouse = (clientX: number, clientY: number) => {
-            const rect = rectRef.current;
-            if (!rect) return;
-            const x = clientX - rect.left;
-            const y = clientY - rect.top;
-            const ratio = currentDprRef.current;
-            const hb = rect.height * ratio;
-            mouseTarget.set(x * ratio, hb - y * ratio);
-        };
-        const onMove = (ev: PointerEvent | MouseEvent) => updateMouse(ev.clientX, ev.clientY);
-        const onLeave = () => mouseTarget.set(0, 0);
-        canvas.addEventListener('pointermove', onMove as any, { passive: true });
-        canvas.addEventListener('pointerdown', onMove as any, { passive: true });
-        canvas.addEventListener('pointerenter', onMove as any, { passive: true });
-        canvas.addEventListener('pointerleave', onLeave as any, { passive: true });
-
-        const onCtxLost = (e: Event) => {
-            e.preventDefault();
-            pausedRef.current = true;
-        };
-        const onCtxRestored = () => {
-            pausedRef.current = false;
-            scheduleResize();
-        };
+    };
         canvas.addEventListener('webglcontextlost', onCtxLost, false);
         canvas.addEventListener('webglcontextrestored', onCtxRestored, false);
 

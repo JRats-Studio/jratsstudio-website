@@ -71,14 +71,11 @@ const createTouchTexture = () => {
     else intensity = easeOutQuad(1 - (p.age - maxAge * 0.3) / (maxAge * 0.7)) || 0;
     intensity *= p.force;
     const color = `${((p.vx + 1) / 2) * 255}, ${((p.vy + 1) / 2) * 255}, ${intensity * 255}`;
-    const offset = size * 5;
-    ctx.shadowOffsetX = offset;
-    ctx.shadowOffsetY = offset;
-    ctx.shadowBlur = radius;
-    ctx.shadowColor = `rgba(${color},${0.22 * intensity})`;
+    
+    // Performance optimization: Removed shadowBlur as it's extremely expensive on CPU
     ctx.beginPath();
-    ctx.fillStyle = 'rgba(255,0,0,1)';
-    ctx.arc(pos.x - offset, pos.y - offset, radius, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${color},${intensity})`; // Combine color and alpha
+    ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
     ctx.fill();
   };
   const addTouch = (norm: { x: number; y: number }) => {
@@ -464,9 +461,9 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
       const quad = new THREE.Mesh(quadGeom, material);
       scene.add(quad);
       const clock = new THREE.Clock();
-      const setSize = () => {
-        const w = container.clientWidth || 1;
-        const h = container.clientHeight || 1;
+      const setSize = (width?: number, height?: number) => {
+        const w = width ?? (container.clientWidth || 1);
+        const h = height ?? (container.clientHeight || 1);
         renderer.setSize(w, h, false);
         uniforms.uResolution.value.set(renderer.domElement.width, renderer.domElement.height);
         if (threeRef.current?.composer)
@@ -474,7 +471,14 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
         uniforms.uPixelSize.value = pixelSize * renderer.getPixelRatio();
       };
       setSize();
-      const ro = new ResizeObserver(setSize);
+
+      const onResize = (entries: ResizeObserverEntry[]) => {
+          if (entries[0]) {
+              const { width, height } = entries[0].contentRect;
+              setSize(width, height);
+          }
+      };
+      const ro = new ResizeObserver(onResize);
       ro.observe(container);
       const randomFloat = () => {
         if (typeof window !== 'undefined' && (window as any).crypto?.getRandomValues) {
