@@ -2,7 +2,10 @@
 
 import { useEffect, useRef } from 'react';
 import { EffectComposer, RenderPass, EffectPass, BloomEffect, ChromaticAberrationEffect } from 'postprocessing';
-import * as THREE from 'three';
+import { 
+    WebGLRenderer, ShaderMaterial, Vector2, Vector3, MathUtils, SRGBColorSpace, 
+    NoToneMapping, Scene, OrthographicCamera, Mesh, PlaneGeometry, Color 
+} from 'three';
 import './GridScan.css';
 
 const vert = `
@@ -327,19 +330,19 @@ export const GridScan: React.FC<GridScanProps> = ({
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-    const materialRef = useRef<THREE.ShaderMaterial | null>(null);
+    const rendererRef = useRef<WebGLRenderer | null>(null);
+    const materialRef = useRef<ShaderMaterial | null>(null);
     const composerRef = useRef<EffectComposer | null>(null);
     const bloomRef = useRef<BloomEffect | null>(null);
     const chromaRef = useRef<ChromaticAberrationEffect | null>(null);
     const rafRef = useRef<number | null>(null);
 
-    const lookTarget = useRef(new THREE.Vector2(0, 0));
+    const lookTarget = useRef(new Vector2(0, 0));
     const tiltTarget = useRef(0);
     const yawTarget = useRef(0);
 
-    const lookCurrent = useRef(new THREE.Vector2(0, 0));
-    const lookVel = useRef(new THREE.Vector2(0, 0));
+    const lookCurrent = useRef(new Vector2(0, 0));
+    const lookVel = useRef(new Vector2(0, 0));
     const tiltCurrent = useRef(0);
     const tiltVel = useRef(0);
     const yawCurrent = useRef(0);
@@ -362,14 +365,11 @@ export const GridScan: React.FC<GridScanProps> = ({
         }
     };
 
-    const s = THREE.MathUtils.clamp(sensitivity, 0, 1);
-    const skewScale = THREE.MathUtils.lerp(0.06, 0.2, s);
-    const tiltScale = THREE.MathUtils.lerp(0.12, 0.3, s);
-    const yawScale = THREE.MathUtils.lerp(0.1, 0.28, s);
-    const smoothTime = THREE.MathUtils.lerp(0.45, 0.12, s);
+    // Lightweight local helpers to avoid importing `three` at module evaluation time
+    const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+    const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
     const maxSpeed = Infinity;
 
-    const yBoost = THREE.MathUtils.lerp(1.2, 1.6, s);
 
     useEffect(() => {
         const el = containerRef.current;
@@ -416,7 +416,7 @@ export const GridScan: React.FC<GridScanProps> = ({
                     yawTarget.current = 0;
                 },
                 Math.max(0, snapBackDelay || 0)
-            );
+        );
         };
         el.addEventListener('mousemove', onMove);
         el.addEventListener('mouseenter', onEnter);
@@ -435,185 +435,237 @@ export const GridScan: React.FC<GridScanProps> = ({
         const container = containerRef.current;
         if (!container) return;
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        rendererRef.current = renderer;
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-        renderer.setSize(container.clientWidth, container.clientHeight);
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
-        renderer.toneMapping = THREE.NoToneMapping;
-        renderer.autoClear = false;
-        renderer.setClearColor(0x000000, 0);
-        container.appendChild(renderer.domElement);
+        let mounted = true;
+        let initialized = false;
+        let rendererInstance: any = null;
+        let composerInstance: any = null;
+        let materialInstance: any = null;
+        let resizeObserver: ResizeObserver | null = null;
+        let quadInstance: any = null;
 
-        const uniforms = {
-            iResolution: {
-                value: new THREE.Vector3(container.clientWidth, container.clientHeight, renderer.getPixelRatio())
-            },
-            iTime: { value: 0 },
-            uSkew: { value: new THREE.Vector2(0, 0) },
-            uTilt: { value: 0 },
-            uYaw: { value: 0 },
-            uLineThickness: { value: lineThickness },
-            uLinesColor: { value: srgbColor(linesColor) },
-            uScanColor: { value: srgbColor(scanColor) },
-            uGridScale: { value: gridScale },
-            uLineStyle: { value: lineStyle === 'dashed' ? 1 : lineStyle === 'dotted' ? 2 : 0 },
-            uLineJitter: { value: Math.max(0, Math.min(1, lineJitter || 0)) },
-            uScanOpacity: { value: scanOpacity },
-            uNoise: { value: noiseIntensity },
-            uBloomOpacity: { value: bloomIntensity },
-            uScanGlow: { value: scanGlow },
-            uScanSoftness: { value: scanSoftness },
-            uPhaseTaper: { value: scanPhaseTaper },
-            uScanDuration: { value: scanDuration },
-            uScanDelay: { value: scanDelay },
-            uScanDirection: { value: scanDirection === 'backward' ? 1 : scanDirection === 'pingpong' ? 2 : 0 },
-            uScanStarts: { value: new Array(MAX_SCANS).fill(0) },
-            uScanCount: { value: 0 }
+        const cleanup = () => {
+            // Stop animation
+            if (rafRef.current) {
+                cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
+            }
+            // Disconnect observer
+            if (resizeObserver) {
+                try { resizeObserver.disconnect(); } catch {}
+                resizeObserver = null;
+            }
+            // Dispose material/geometry
+            if (materialRef.current) {
+                try { materialRef.current.dispose(); } catch {}
+                materialRef.current = null;
+            }
+            if (quadInstance && quadInstance.geometry) {
+                try { quadInstance.geometry.dispose(); } catch {}
+                quadInstance = null;
+            }
+            // Dispose composer
+            if (composerInstance && composerInstance.dispose) {
+                try { composerInstance.dispose(); } catch {}
+                composerInstance = null;
+            }
+            // Dispose renderer and remove DOM
+            if (rendererInstance) {
+                try { (rendererInstance as any).forceContextLoss?.(); } catch {}
+                try { rendererInstance.domElement?.remove?.(); } catch {}
+                rendererInstance = null;
+            }
+            materialInstance = null;
         };
 
-        const material = new THREE.ShaderMaterial({
-            uniforms,
-            vertexShader: vert,
-            fragmentShader: frag,
-            transparent: true,
-            depthWrite: false,
-            depthTest: false
-        });
-        materialRef.current = material;
+        const init = async () => {
+            if (!mounted || initialized) return;
+            initialized = true;
+            const [{ WebGLRenderer, ShaderMaterial, Vector2, Vector3, MathUtils, SRGBColorSpace, NoToneMapping, Scene, OrthographicCamera, Mesh, PlaneGeometry, Color }, postprocessing] = await Promise.all([
+                import('three'),
+                import('postprocessing')
+            ]);
 
-        const scene = new THREE.Scene();
-        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-        const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
-        scene.add(quad);
+            if (!mounted) return;
 
-        let composer: EffectComposer | null = null;
-        if (enablePost) {
-            composer = new EffectComposer(renderer);
-            composerRef.current = composer;
-            const renderPass = new RenderPass(scene, camera);
-            composer.addPass(renderPass);
+            const s = MathUtils.clamp(sensitivity, 0, 1);
+            const skewScale = MathUtils.lerp(0.06, 0.2, s);
+            const tiltScale = MathUtils.lerp(0.12, 0.3, s);
+            const yawScale = MathUtils.lerp(0.1, 0.28, s);
+            const smoothTime = MathUtils.lerp(0.45, 0.12, s);
+            const yBoost = MathUtils.lerp(1.2, 1.6, s);
 
-            const bloom = new BloomEffect({
-                intensity: 1.0,
-                luminanceThreshold: bloomThreshold,
-                luminanceSmoothing: bloomSmoothing
+            const renderer = new WebGLRenderer({ antialias: true, alpha: true });
+            rendererInstance = renderer;
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.outputColorSpace = SRGBColorSpace;
+            renderer.toneMapping = NoToneMapping;
+            renderer.autoClear = false;
+            renderer.setClearColor(0x000000, 0);
+            container.appendChild(renderer.domElement);
+
+            const uniforms = {
+                iResolution: {
+                    value: new Vector3(container.clientWidth, container.clientHeight, renderer.getPixelRatio())
+                },
+                iTime: { value: 0 },
+                uSkew: { value: new Vector2(0, 0) },
+                uTilt: { value: 0 },
+                uYaw: { value: 0 },
+                uLineThickness: { value: lineThickness },
+                uLinesColor: { value: srgbColor(linesColor) },
+                uScanColor: { value: srgbColor(scanColor) },
+                uGridScale: { value: gridScale },
+                uLineStyle: { value: lineStyle === 'dashed' ? 1 : lineStyle === 'dotted' ? 2 : 0 },
+                uLineJitter: { value: Math.max(0, Math.min(1, lineJitter || 0)) },
+                uScanOpacity: { value: scanOpacity },
+                uNoise: { value: noiseIntensity },
+                uBloomOpacity: { value: bloomIntensity },
+                uScanGlow: { value: scanGlow },
+                uScanSoftness: { value: scanSoftness },
+                uPhaseTaper: { value: scanPhaseTaper },
+                uScanDuration: { value: scanDuration },
+                uScanDelay: { value: scanDelay },
+                uScanDirection: { value: scanDirection === 'backward' ? 1 : scanDirection === 'pingpong' ? 2 : 0 },
+                uScanStarts: { value: new Array(MAX_SCANS).fill(0) },
+                uScanCount: { value: 0 }
+            };
+
+            const material = new ShaderMaterial({
+                uniforms,
+                vertexShader: vert,
+                fragmentShader: frag,
+                transparent: true,
+                depthWrite: false,
+                depthTest: false
             });
-            bloom.blendMode.opacity.value = Math.max(0, bloomIntensity);
-            bloomRef.current = bloom;
+            materialInstance = material;
+            materialRef.current = materialInstance;
 
-            const chroma = new ChromaticAberrationEffect({
-                offset: new THREE.Vector2(chromaticAberration, chromaticAberration),
-                radialModulation: true,
-                modulationOffset: 0.0
-            });
-            chromaRef.current = chroma;
+            const scene = new Scene();
+            const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
+            const quad = new Mesh(new PlaneGeometry(2, 2), materialInstance);
+            scene.add(quad);
+            quadInstance = quad;
 
-            const effectPass = new EffectPass(camera, bloom, chroma);
-            effectPass.renderToScreen = true;
-            composer.addPass(effectPass);
-        }
+            if (enablePost) {
+                const EffectComposer = postprocessing.EffectComposer;
+                const RenderPass = postprocessing.RenderPass;
+                const BloomEffect = postprocessing.BloomEffect;
+                const ChromaticAberrationEffect = postprocessing.ChromaticAberrationEffect;
 
-        const onResize = () => {
-            if (container && renderer && material && composerRef.current) {
-                renderer.setSize(container.clientWidth, container.clientHeight);
-                material.uniforms.iResolution.value.set(container.clientWidth, container.clientHeight, renderer.getPixelRatio());
-                composerRef.current.setSize(container.clientWidth, container.clientHeight);
+                const composer = new EffectComposer(renderer);
+                composerInstance = composer;
+                const renderPass = new RenderPass(scene, camera);
+                composer.addPass(renderPass);
+
+                const bloom = new BloomEffect({
+                    intensity: 1.0,
+                    luminanceThreshold: bloomThreshold,
+                    luminanceSmoothing: bloomSmoothing
+                });
+                bloom.blendMode.opacity.value = Math.max(0, bloomIntensity);
+                bloomRef.current = bloom;
+
+                const chroma = new ChromaticAberrationEffect({
+                    offset: new Vector2(chromaticAberration, chromaticAberration),
+                    radialModulation: true,
+                    modulationOffset: 0.0
+                });
+                chromaRef.current = chroma;
+
+                const effectPass = new postprocessing.EffectPass(camera, bloom, chroma);
+                effectPass.renderToScreen = true;
+                composer.addPass(effectPass);
             }
-        };
 
-        const resizeObserver = new ResizeObserver(() => onResize());
-        resizeObserver.observe(container);
+            // Remainder of setup: resize observer, tick loop, and cleanup
 
-        let last = performance.now();
-        const tick = () => {
-            const now = performance.now();
-            const dt = Math.max(0, Math.min(0.1, (now - last) / 1000));
-            last = now;
+            const onResize = (entries: ResizeObserverEntry[]) => {
+                const entry = entries[0];
+                if (entry && container && rendererInstance && materialInstance) {
+                    const { width, height } = entry.contentRect;
+                    rendererInstance.setSize(width, height);
+                    materialInstance.uniforms.iResolution.value.set(width, height, rendererInstance.getPixelRatio());
+                    if (composerInstance) composerInstance.setSize(width, height);
+                }
+            };
 
-            lookCurrent.current.copy(
-                smoothDampVec2(lookCurrent.current, lookTarget.current, lookVel.current, smoothTime, maxSpeed, dt)
-            );
+            const resizeObserver = new ResizeObserver((entries) => onResize(entries));
+            resizeObserver.observe(container);
 
-            const tiltSm = smoothDampFloat(
-                tiltCurrent.current,
-                tiltTarget.current,
-                { v: tiltVel.current },
-                smoothTime,
-                maxSpeed,
-                dt
-            );
-            tiltCurrent.current = tiltSm.value;
-            tiltVel.current = tiltSm.v;
+            let last = performance.now();
+            const tick = () => {
+                const now = performance.now();
+                const dt = Math.max(0, Math.min(0.1, (now - last) / 1000));
+                last = now;
 
-            const yawSm = smoothDampFloat(
-                yawCurrent.current,
-                yawTarget.current,
-                { v: yawVel.current },
-                smoothTime,
-                maxSpeed,
-                dt
-            );
-            yawCurrent.current = yawSm.value;
-            yawVel.current = yawSm.v;
+                lookCurrent.current.copy(
+                    smoothDampVec2(lookCurrent.current, lookTarget.current, lookVel.current, smoothTime, maxSpeed, dt)
+                );
 
-            const skew = new THREE.Vector2(lookCurrent.current.x * skewScale, -lookCurrent.current.y * yBoost * skewScale);
-            material.uniforms.uSkew.value.set(skew.x, skew.y);
-            material.uniforms.uTilt.value = tiltCurrent.current * tiltScale;
-            material.uniforms.uYaw.value = THREE.MathUtils.clamp(yawCurrent.current * yawScale, -0.6, 0.6);
+                const tiltSm = smoothDampFloat(
+                    tiltCurrent.current,
+                    tiltTarget.current,
+                    { v: tiltVel.current },
+                    smoothTime,
+                    maxSpeed,
+                    dt
+                );
+                tiltCurrent.current = tiltSm.value;
+                tiltVel.current = tiltSm.v;
 
-            material.uniforms.iTime.value = now / 1000;
-            renderer.clear(true, true, true);
-            if (composerRef.current) {
-                composerRef.current.render(dt);
-            } else {
-                renderer.render(scene, camera);
-            }
+                const yawSm = smoothDampFloat(
+                    yawCurrent.current,
+                    yawTarget.current,
+                    { v: yawVel.current },
+                    smoothTime,
+                    maxSpeed,
+                    dt
+                );
+                yawCurrent.current = yawSm.value;
+                yawVel.current = yawSm.v;
+
+                const skew = new (Vector2 as any)(lookCurrent.current.x * skewScale, -lookCurrent.current.y * (yBoost ?? 1) * skewScale);
+                materialInstance.uniforms.uSkew.value.set(skew.x, skew.y);
+                materialInstance.uniforms.uTilt.value = tiltCurrent.current * tiltScale;
+                materialInstance.uniforms.uYaw.value = MathUtils.clamp(yawCurrent.current * yawScale, -0.6, 0.6);
+
+                materialInstance.uniforms.iTime.value = now / 1000;
+                rendererInstance.clear(true, true, true);
+                if (composerInstance) {
+                    composerInstance.render(dt);
+                } else {
+                    rendererInstance.render(scene, camera);
+                }
+                rafRef.current = requestAnimationFrame(tick);
+            };
             rafRef.current = requestAnimationFrame(tick);
+
+            // Attach resize observer and start loop
+            // end of init
         };
-        rafRef.current = requestAnimationFrame(tick);
+
+        const io = new IntersectionObserver((entries) => {
+            const e = entries[0];
+            if (e && e.isIntersecting) {
+                if ('requestIdleCallback' in window) {
+                    (window as any).requestIdleCallback(init);
+                } else {
+                    setTimeout(init, 200);
+                }
+            }
+        }, { threshold: 0.05 });
+
+        io.observe(container);
 
         return () => {
-            if (rafRef.current) cancelAnimationFrame(rafRef.current);
-            resizeObserver.disconnect();
-            material.dispose();
-            quad.geometry.dispose();
-
-            if (composerRef.current) {
-                composerRef.current.dispose();
-                composerRef.current = null;
-            }
-            renderer.dispose();
-            container.removeChild(renderer.domElement);
+            io.disconnect();
+            mounted = false;
+            cleanup();
         };
-    }, [
-        sensitivity,
-        lineThickness,
-        linesColor,
-        scanColor,
-        scanOpacity,
-        gridScale,
-        lineStyle,
-        lineJitter,
-        scanDirection,
-        enablePost,
-        noiseIntensity,
-        bloomIntensity,
-        scanGlow,
-        scanSoftness,
-        scanPhaseTaper,
-        scanDuration,
-        scanDelay,
-        bloomThreshold,
-        bloomSmoothing,
-        chromaticAberration,
-        smoothTime,
-        maxSpeed,
-        skewScale,
-        yBoost,
-        tiltScale,
-        yawScale
-    ]);
+    }, []);
+
 
     useEffect(() => {
         const m = materialRef.current;
@@ -669,10 +721,10 @@ export const GridScan: React.FC<GridScanProps> = ({
         const handler = (e: any) => {
             const gamma = e.gamma ?? 0;
             const beta = e.beta ?? 0;
-            const nx = THREE.MathUtils.clamp(gamma / 45, -1, 1);
-            const ny = THREE.MathUtils.clamp(-beta / 30, -1, 1);
+            const nx = MathUtils.clamp(gamma / 45, -1, 1);
+            const ny = MathUtils.clamp(-beta / 30, -1, 1);
             lookTarget.current.set(nx, ny);
-            tiltTarget.current = THREE.MathUtils.degToRad(gamma) * 0.4;
+            tiltTarget.current = MathUtils.degToRad(gamma) * 0.4;
         };
         window.addEventListener('deviceorientation', handler);
         return () => {
@@ -686,11 +738,11 @@ export const GridScan: React.FC<GridScanProps> = ({
 };
 
 function srgbColor(hex: string) {
-    const c = new THREE.Color(hex);
+    const c = new Color(hex);
     return c.convertSRGBToLinear();
 }
 
-function smoothDampVec2(current: THREE.Vector2, target: THREE.Vector2, currentVelocity: THREE.Vector2, smoothTime: number, maxSpeed: number, deltaTime: number) {
+function smoothDampVec2(current: Vector2, target: Vector2, currentVelocity: Vector2, smoothTime: number, maxSpeed: number, deltaTime: number) {
     const out = current.clone();
     smoothTime = Math.max(0.0001, smoothTime);
     const omega = 2 / smoothTime;
@@ -745,4 +797,3 @@ function smoothDampFloat(current: number, target: number, velRef: { v: number },
     }
     return { value: out, v: velRef.v };
 }
-

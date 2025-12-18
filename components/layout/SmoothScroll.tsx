@@ -1,29 +1,51 @@
 "use client";
 
-import { ReactNode, useEffect } from "react";
-import Lenis from "lenis";
+import { ReactNode, useEffect, useRef } from "react";
 
 export const SmoothScroll = ({ children }: { children: ReactNode }) => {
+    const lenisRef = useRef<any | null>(null);
+    const rafIdRef = useRef<number>(0);
+
     useEffect(() => {
-        const lenis = new Lenis({
-            duration: 1.2,
-            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-            orientation: "vertical",
-            gestureOrientation: "vertical",
-            smoothWheel: true,
-        });
+        let mounted = true;
+        // Defer Lenis initialization to reduce TBT during initial load
+        const initHandle = setTimeout(() => {
+            (async () => {
+                if (!mounted) return;
+                const { default: Lenis } = await import('lenis');
+                if (!mounted) return;
+                const lenis = new Lenis({
+                    duration: 1.2,
+                    easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+                    orientation: "vertical",
+                    gestureOrientation: "vertical",
+                    smoothWheel: true,
+                });
 
-        function raf(time: number) {
-            lenis.raf(time);
-            requestAnimationFrame(raf);
-        }
+                lenisRef.current = lenis;
 
-        requestAnimationFrame(raf);
+                function raf(time: number) {
+                    if (!mounted) return;
+                    lenis.raf(time);
+                    rafIdRef.current = requestAnimationFrame(raf);
+                }
+
+                rafIdRef.current = requestAnimationFrame(raf);
+            })();
+        }, 100);
 
         return () => {
-            lenis.destroy();
+            mounted = false;
+            clearTimeout(initHandle);
+            if (rafIdRef.current) {
+                cancelAnimationFrame(rafIdRef.current);
+            }
+            if (lenisRef.current) {
+                lenisRef.current.destroy();
+            }
         };
     }, []);
 
     return <>{children}</>;
 };
+

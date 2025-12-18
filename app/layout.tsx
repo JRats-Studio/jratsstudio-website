@@ -2,19 +2,21 @@ import type { Metadata } from "next";
 import { Alfa_Slab_One, Roboto } from "next/font/google";
 import "./globals.css";
 import { NoiseOverlay } from "@/components/layout/NoiseOverlay";
-import { SmoothScroll } from "@/components/layout/SmoothScroll";
-import { Preloader } from "@/components/layout/Preloader";
+import { ClientSmoothScroll } from "@/components/layout/ClientSmoothScroll";
+import { ClientPreloader } from "@/components/layout/ClientPreloader";
 
 const alfaSlabOne = Alfa_Slab_One({
   variable: "--font-alfa",
   subsets: ["latin"],
   weight: "400",
+  display: "swap",
 });
 
 const roboto = Roboto({
   variable: "--font-roboto",
   subsets: ["latin"],
   weight: ["400", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -36,11 +38,11 @@ export default function RootLayout({
       <body
         className={`${alfaSlabOne.variable} ${roboto.variable} antialiased bg-black`}
       >
-        <SmoothScroll>
-          <Preloader />
+        <ClientSmoothScroll>
+          <ClientPreloader />
           <NoiseOverlay />
           {children}
-        </SmoothScroll>
+        </ClientSmoothScroll>
       </body>
     </html>
   );

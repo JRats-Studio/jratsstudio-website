@@ -360,21 +360,58 @@ const Waves: React.FC<WavesProps> = ({
       }
     }
 
-    setSize();
-    setLines();
-    frameIdRef.current = requestAnimationFrame(tick);
-    window.addEventListener('resize', onResize);
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    let idleHandle: number | null = null;
+    const start = () => {
+      if (!container) return;
+      setSize();
+      setLines();
+      frameIdRef.current = requestAnimationFrame(tick);
+      window.addEventListener('resize', onResize);
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('touchmove', onTouchMove, { passive: false });
+    };
 
-    return () => {
+    const stop = () => {
       window.removeEventListener('resize', onResize);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('touchmove', onTouchMove);
       if (frameIdRef.current !== null) {
         cancelAnimationFrame(frameIdRef.current);
+        frameIdRef.current = null;
       }
     };
+
+    const io = new IntersectionObserver((entries) => {
+      const e = entries[0];
+      if (e && e.isIntersecting) {
+        if ('requestIdleCallback' in window) {
+          // Use the browser idle callback when available
+          idleHandle = (window as any).requestIdleCallback(() => start());
+        } else {
+          // Fallback to setTimeout; use the global setTimeout for correct typing
+          idleHandle = setTimeout(() => start(), 200) as unknown as number;
+        }
+      } else {
+        if (idleHandle !== null) {
+          if ('cancelIdleCallback' in window) (window as any).cancelIdleCallback(idleHandle);
+          else clearTimeout(idleHandle);
+          idleHandle = null;
+        }
+        stop();
+      }
+    }, { threshold: 0.05 });
+
+    io.observe(container);
+
+    return () => {
+      io.disconnect();
+      if (idleHandle !== null) {
+        if ('cancelIdleCallback' in window) (window as any).cancelIdleCallback(idleHandle);
+        else clearTimeout(idleHandle);
+        idleHandle = null;
+      }
+      stop();
+    }; 
   }, []);
 
   return (

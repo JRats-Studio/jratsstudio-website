@@ -13,7 +13,7 @@
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.25",
     "gsap": "^3.13.0",
-    "lenis": "^1.3.15",
+    "lenis": "^1.3.16",
     "lucide-react": "^0.555.0",
     "next": "16.0.7",
     "postprocessing": "^6.38.0",
@@ -32,5 +32,10 @@
     "eslint-config-next": "16.0.7",
     "tailwindcss": "^4",
     "typescript": "^5"
-  }
+  },
+  "browserslist": [
+    "defaults",
+    "not ie 11",
+    "not OP_Mini all"
+  ]
 }

@@ -133,6 +133,9 @@ const useAnimationLoop = (
         const track = trackRef.current;
         if (!track) return;
 
+        const observed = track.parentElement ?? track;
+        let visible = false;
+
         const prefersReduced =
             typeof window !== 'undefined' &&
             window.matchMedia &&
@@ -147,6 +150,46 @@ const useAnimationLoop = (
                 : `translate3d(${-offsetRef.current}px, 0, 0)`;
             track.style.transform = transformValue;
         }
+
+        let rafStarted = false;
+        const start = () => {
+            if (rafStarted || prefersReduced) return;
+            rafStarted = true;
+            rafRef.current = requestAnimationFrame((timestamp) => {
+                // prime animation loop
+                rafRef.current = requestAnimationFrame(animate as FrameRequestCallback);
+            });
+        };
+        const stop = () => {
+            if (rafRef.current !== null) {
+                cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
+            }
+            lastTimestampRef.current = null;
+            rafStarted = false;
+        };
+
+        const io = new IntersectionObserver(entries => {
+            const e = entries[0];
+            if (e && e.isIntersecting) {
+                if (!visible) {
+                    visible = true;
+                    start();
+                }
+            } else {
+                if (visible) {
+                    visible = false;
+                    stop();
+                }
+            }
+        }, { threshold: 0.05 });
+        io.observe(observed);
+
+        // ensure cleanup disconnects observer
+        const originalReturn = () => {
+            io.disconnect();
+            stop();
+        };
 
         if (prefersReduced) {
             track.style.transform = isVertical ? 'translate3d(0, 0, 0)' : 'translate3d(0, 0, 0)';
@@ -185,6 +228,7 @@ const useAnimationLoop = (
         rafRef.current = requestAnimationFrame(animate);
 
         return () => {
+            io.disconnect();
             if (rafRef.current !== null) {
                 cancelAnimationFrame(rafRef.current);
                 rafRef.current = null;

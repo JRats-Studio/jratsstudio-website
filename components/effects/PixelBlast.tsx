@@ -3,7 +3,10 @@
 // Component inspired by github.com/zavalit/bayer-dithering-webgl-demo
 
 import React, { useEffect, useRef } from 'react';
-import * as THREE from 'three';
+import { 
+    Texture, LinearFilter, Uniform, Vector2, Color, Clock, WebGLRenderer, 
+    Scene, OrthographicCamera, ShaderMaterial, PlaneGeometry, Mesh, GLSL3 
+} from 'three';
 import { EffectComposer, EffectPass, RenderPass, Effect } from 'postprocessing';
 
 type PixelBlastVariant = 'square' | 'circle' | 'triangle' | 'diamond';
@@ -42,9 +45,9 @@ const createTouchTexture = () => {
   if (!ctx) throw new Error('2D context not available');
   ctx.fillStyle = 'black';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  const texture = new THREE.Texture(canvas);
-  texture.minFilter = THREE.LinearFilter;
-  texture.magFilter = THREE.LinearFilter;
+  const texture = new Texture(canvas);
+  texture.minFilter = LinearFilter;
+  texture.magFilter = LinearFilter;
   texture.generateMipmaps = false;
   const trail: {
     x: number;
@@ -71,14 +74,11 @@ const createTouchTexture = () => {
     else intensity = easeOutQuad(1 - (p.age - maxAge * 0.3) / (maxAge * 0.7)) || 0;
     intensity *= p.force;
     const color = `${((p.vx + 1) / 2) * 255}, ${((p.vy + 1) / 2) * 255}, ${intensity * 255}`;
-    const offset = size * 5;
-    ctx.shadowOffsetX = offset;
-    ctx.shadowOffsetY = offset;
-    ctx.shadowBlur = radius;
-    ctx.shadowColor = `rgba(${color},${0.22 * intensity})`;
+    
+    // Performance optimization: Removed shadowBlur as it's extremely expensive on CPU
     ctx.beginPath();
-    ctx.fillStyle = 'rgba(255,0,0,1)';
-    ctx.arc(pos.x - offset, pos.y - offset, radius, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${color},${intensity})`; // Combine color and alpha
+    ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
     ctx.fill();
   };
   const addTouch = (norm: { x: number; y: number }) => {
@@ -126,7 +126,7 @@ const createTouchTexture = () => {
   };
 };
 
-const createLiquidEffect = (texture: THREE.Texture, opts?: { strength?: number; freq?: number }) => {
+const createLiquidEffect = (texture: Texture, opts?: { strength?: number; freq?: number }) => {
   const fragment = `
     uniform sampler2D uTexture;
     uniform float uStrength;
@@ -147,11 +147,11 @@ const createLiquidEffect = (texture: THREE.Texture, opts?: { strength?: number; 
     }
     `;
   return new Effect('LiquidEffect', fragment, {
-    uniforms: new Map<string, THREE.Uniform>([
-      ['uTexture', new THREE.Uniform(texture)],
-      ['uStrength', new THREE.Uniform(opts?.strength ?? 0.025)],
-      ['uTime', new THREE.Uniform(0)],
-      ['uFreq', new THREE.Uniform(opts?.freq ?? 4.5)]
+    uniforms: new Map<string, Uniform>([
+      ['uTexture', new Uniform(texture)],
+      ['uStrength', new Uniform(opts?.strength ?? 0.025)],
+      ['uTime', new Uniform(0)],
+      ['uFreq', new Uniform(opts?.freq ?? 4.5)]
     ])
   });
 };
@@ -358,17 +358,17 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
   const speedRef = useRef(speed);
 
   const threeRef = useRef<{
-    renderer: THREE.WebGLRenderer;
-    scene: THREE.Scene;
-    camera: THREE.OrthographicCamera;
-    material: THREE.ShaderMaterial;
-    clock: THREE.Clock;
+    renderer: WebGLRenderer;
+    scene: Scene;
+    camera: OrthographicCamera;
+    material: ShaderMaterial;
+    clock: Clock;
     clickIx: number;
     uniforms: {
-      uResolution: { value: THREE.Vector2 };
+      uResolution: { value: Vector2 };
       uTime: { value: number };
-      uColor: { value: THREE.Color };
-      uClickPos: { value: THREE.Vector2[] };
+      uColor: { value: Color };
+      uClickPos: { value: Vector2[] };
       uClickTimes: { value: Float32Array };
       uShapeType: { value: number };
       uPixelSize: { value: number };
@@ -383,7 +383,7 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
     };
     resizeObserver?: ResizeObserver;
     raf?: number;
-    quad?: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>;
+    quad?: Mesh<PlaneGeometry, ShaderMaterial>;
     timeOffset?: number;
     composer?: EffectComposer;
     touch?: ReturnType<typeof createTouchTexture>;
@@ -418,7 +418,7 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
         threeRef.current = null;
       }
       const canvas = document.createElement('canvas');
-      const renderer = new THREE.WebGLRenderer({
+      const renderer = new WebGLRenderer({
         canvas,
         antialias,
         alpha: true,
@@ -431,11 +431,11 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
       if (transparent) renderer.setClearAlpha(0);
       else renderer.setClearColor(0x000000, 1);
       const uniforms = {
-        uResolution: { value: new THREE.Vector2(0, 0) },
+        uResolution: { value: new Vector2(0, 0) },
         uTime: { value: 0 },
-        uColor: { value: new THREE.Color(color) },
+        uColor: { value: new Color(color) },
         uClickPos: {
-          value: Array.from({ length: MAX_CLICKS }, () => new THREE.Vector2(-1, -1))
+          value: Array.from({ length: MAX_CLICKS }, () => new Vector2(-1, -1))
         },
         uClickTimes: { value: new Float32Array(MAX_CLICKS) },
         uShapeType: { value: SHAPE_MAP[variant] ?? 0 },
@@ -449,33 +449,42 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
         uRippleIntensity: { value: rippleIntensityScale },
         uEdgeFade: { value: edgeFade }
       };
-      const scene = new THREE.Scene();
-      const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-      const material = new THREE.ShaderMaterial({
+      const scene = new Scene();
+      const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      const material = new ShaderMaterial({
         vertexShader: VERTEX_SRC,
         fragmentShader: FRAGMENT_SRC,
         uniforms,
         transparent: true,
         depthTest: false,
         depthWrite: false,
-        glslVersion: THREE.GLSL3
+        glslVersion: GLSL3
       });
-      const quadGeom = new THREE.PlaneGeometry(2, 2);
-      const quad = new THREE.Mesh(quadGeom, material);
+      const quadGeom = new PlaneGeometry(2, 2);
+      const quad = new Mesh(quadGeom, material);
       scene.add(quad);
-      const clock = new THREE.Clock();
-      const setSize = () => {
-        const w = container.clientWidth || 1;
-        const h = container.clientHeight || 1;
+      const clock = new Clock();
+      const setSize = (width?: number, height?: number) => {
+        const w = width ?? (container.clientWidth || 1);
+        const h = height ?? (container.clientHeight || 1);
         renderer.setSize(w, h, false);
         uniforms.uResolution.value.set(renderer.domElement.width, renderer.domElement.height);
         if (threeRef.current?.composer)
           threeRef.current.composer.setSize(renderer.domElement.width, renderer.domElement.height);
         uniforms.uPixelSize.value = pixelSize * renderer.getPixelRatio();
       };
-      setSize();
-      const ro = new ResizeObserver(setSize);
+      
+      const onResize = (entries: ResizeObserverEntry[]) => {
+          if (entries[0]) {
+            const { width, height } = entries[0].contentRect;
+            setSize(width, height);
+          }
+      };
+      const ro = new ResizeObserver(onResize);
       ro.observe(container);
+      
+      // Removed initial setSize() call to rely on RO and avoid initial reflow
+
       const randomFloat = () => {
         if (typeof window !== 'undefined' && (window as any).crypto?.getRandomValues) {
           const u32 = new Uint32Array(1);
@@ -511,9 +520,9 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
           'NoiseEffect',
           `uniform float uTime; uniform float uAmount; float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453);} void mainUv(inout vec2 uv){} void mainImage(const in vec4 inputColor,const in vec2 uv,out vec4 outputColor){ float n=hash(floor(uv*vec2(1920.0,1080.0))+floor(uTime*60.0)); float g=(n-0.5)*uAmount; outputColor=inputColor+vec4(vec3(g),0.0);} `,
           {
-            uniforms: new Map<string, THREE.Uniform>([
-              ['uTime', new THREE.Uniform(0)],
-              ['uAmount', new THREE.Uniform(noiseAmount)]
+            uniforms: new Map<string, Uniform>([
+              ['uTime', new Uniform(0)],
+              ['uAmount', new Uniform(noiseAmount)]
             ])
           }
         );
