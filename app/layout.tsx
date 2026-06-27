@@ -18,15 +18,23 @@ const roboto = Roboto({
   weight: ["400", "700"],
   display: "swap",
 });
-
 export const metadata: Metadata = {
-  title: "JRat's Studio",
-  description: "Hackers of the humdrum.",
+  title: "JRat's Studio | AI Solutions & System Engineering",
+  description: "Hackers of the humdrum. We forge bespoke neural architectures, engineer robust software ecosystems, create generative media, and construct secure data rooms.",
+  keywords: ["AI Solutions", "Neural Architecture", "Software Dev", "System Engineering", "Generative Media", "Secure Data Rooms", "Autonomous Agents", "Custom CRMs"],
+  openGraph: {
+    title: "JRat's Studio | AI Solutions & System Engineering",
+    description: "Hackers of the humdrum. We forge bespoke neural architectures, engineer robust software ecosystems, create generative media, and construct secure data rooms.",
+    type: "website",
+  },
   icons: {
     icon: "/logo.svg",
     apple: "/logo.svg",
   },
 };
+
+import { Navbar } from "@/components/layout/Navbar";
+import { TechnicalGrid } from "@/components/effects/TechnicalGrid";
 
 export default function RootLayout({
   children,
@@ -40,7 +48,9 @@ export default function RootLayout({
       >
         <ClientSmoothScroll>
           <ClientPreloader />
+          <TechnicalGrid />
           <NoiseOverlay />
+          <Navbar />
           {children}
         </ClientSmoothScroll>
       </body>

@@ -23,6 +23,7 @@ export const SmoothScroll = ({ children }: { children: ReactNode }) => {
                 });
 
                 lenisRef.current = lenis;
+                (window as any).lenis = lenis;
 
                 function raf(time: number) {
                     if (!mounted) return;

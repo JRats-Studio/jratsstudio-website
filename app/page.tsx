@@ -15,17 +15,23 @@ export default function Home() {
     <main className="min-h-screen bg-black">
       <Hero />
       
-      <SectionLoader minHeight="100vh">
-        <Services />
-      </SectionLoader>
+      <div id="services">
+        <SectionLoader minHeight="100vh">
+          <Services />
+        </SectionLoader>
+      </div>
       
-      <SectionLoader minHeight="80vh">
-        <AboutFrameworksSplit />
-      </SectionLoader>
+      <div id="about">
+        <SectionLoader minHeight="80vh">
+          <AboutFrameworksSplit />
+        </SectionLoader>
+      </div>
       
-      <SectionLoader minHeight="30vh">
-        <Footer />
-      </SectionLoader>
+      <div id="connect">
+        <SectionLoader minHeight="30vh">
+          <Footer />
+        </SectionLoader>
+      </div>
     </main>
   );
 }

@@ -5,10 +5,12 @@ import { useRef, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { BrainCircuit, Terminal, Video, Database, Check } from "lucide-react";
 
-const PixelBlast = dynamic(() => import("@/components/effects/PixelBlast"), {
+const Waves = dynamic(() => import("@/components/effects/Waves"), {
     ssr: false,
     loading: () => <div className="absolute inset-0 bg-transparent" />,
 });
+
+import { TextReveal } from "@/components/effects/TextReveal";
 
 const services = [
     {
@@ -63,76 +65,80 @@ const ServiceCard = ({ service, index, range, targetScale, progress }: ServiceCa
     });
 
     const scale = useTransform(progress, range, [1, targetScale]);
+    const [isHovered, setIsHovered] = useState(false);
 
     return (
         <div ref={container} className="h-screen flex items-center justify-center sticky top-0">
             <motion.div
                 style={{ scale, top: `calc(-5vh + ${index * 25}px)` }}
-                className="relative flex flex-col h-auto min-h-[500px] sm:min-h-[550px] md:h-[600px] w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-[1400px] rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-10 origin-top bg-[#0a0a0a] border border-white/10 overflow-hidden"
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                className="relative flex flex-col h-auto min-h-[500px] sm:min-h-[550px] md:h-[600px] w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-[1400px] rounded-2xl sm:rounded-3xl origin-top bg-black border border-white/10 hover:border-[#08cb00]/50 hover:shadow-[0_0_30px_rgba(8,203,0,0.15)] transition-all duration-500 overflow-hidden group"
             >
-                <div className="h-full flex flex-col md:flex-row gap-4 sm:gap-6 md:gap-12 lg:gap-16 items-start md:items-center p-2 sm:p-4">
-                    {/* Left Side: Icon & Title */}
-                    <div className="flex-1 space-y-8">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5 }}
-                            className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl sm:rounded-2xl bg-[#08cb00]/10 border border-[#08cb00]/20 flex items-center justify-center"
-                        >
-                            <service.icon className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 text-[#08cb00]" />
-                        </motion.div>
+                {/* Tech Corner Brackets - Expand and turn green on hover */}
+                <div className="absolute top-0 left-0 w-5 h-5 border-t border-l border-white/15 group-hover:border-[#08cb00]/70 group-hover:w-8 group-hover:h-8 transition-all duration-500 rounded-tl-2xl sm:rounded-tl-3xl pointer-events-none z-20" />
+                <div className="absolute top-0 right-0 w-5 h-5 border-t border-r border-white/15 group-hover:border-[#08cb00]/70 group-hover:w-8 group-hover:h-8 transition-all duration-500 rounded-tr-2xl sm:rounded-tr-3xl pointer-events-none z-20" />
+                <div className="absolute bottom-0 left-0 w-5 h-5 border-b border-l border-white/15 group-hover:border-[#08cb00]/70 group-hover:w-8 group-hover:h-8 transition-all duration-500 rounded-bl-2xl sm:rounded-bl-3xl pointer-events-none z-20" />
+                <div className="absolute bottom-0 right-0 w-5 h-5 border-b border-r border-white/15 group-hover:border-[#08cb00]/70 group-hover:w-8 group-hover:h-8 transition-all duration-500 rounded-br-2xl sm:rounded-br-3xl pointer-events-none z-20" />
 
+                {/* Horizontal Bento Grid Layout */}
+                <div className="flex flex-col h-full divide-y divide-white/10 group-hover:divide-[#08cb00]/25 transition-colors duration-500">
+                    
+                    {/* Top Row: Title & Icon (Spans 100% width, vertically centered) */}
+                    <div className="p-6 sm:p-8 md:p-10 pt-10 sm:pt-12 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                         <div>
-                            <motion.h4
-                                initial={{ opacity: 0, x: -20 }}
-                                whileInView={{ opacity: 1, x: 0 }}
-                                transition={{ duration: 0.5, delay: 0.1 }}
-                                className="font-mono text-[#08cb00] text-sm tracking-[0.2em] uppercase mb-4"
-                            >
+                            <h4 className="font-mono text-[#08cb00] text-xs sm:text-sm tracking-[0.2em] uppercase mb-3">
                                 {service.subtitle}
-                            </motion.h4>
-                            <motion.h2
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                whileInView={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.5, delay: 0.2 }}
-                                className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-8xl text-white uppercase leading-[0.9] tracking-tighter"
-                            >
-                                {service.title}
-                            </motion.h2>
+                            </h4>
+                            <h2 className="font-heading text-3xl sm:text-5xl md:text-6xl lg:text-[4.5rem] text-white uppercase leading-[0.95] tracking-tighter group-hover:drop-shadow-[0_0_15px_rgba(8,203,0,0.25)] transition-all duration-500">
+                                <TextReveal text={service.title} />
+                            </h2>
                         </div>
+                        
+                        {/* Technical Icon Box (Increased size & alignment) */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            whileInView={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.5 }}
+                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#08cb00]/10 border border-[#08cb00]/20 flex items-center justify-center self-start sm:self-center group-hover:bg-[#08cb00]/20 group-hover:scale-110 transition-all duration-500 hover:shadow-[0_0_15px_rgba(8,203,0,0.3)]"
+                        >
+                            <service.icon className="w-8 h-8 sm:w-10 sm:h-10 text-[#08cb00]" />
+                        </motion.div>
                     </div>
 
-                    {/* Right Side: Description & Details */}
-                    <div className="flex-1 space-y-4 sm:space-y-6 md:space-y-8 bg-black/60 backdrop-blur-sm p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl border border-white/5">
-                        <motion.p
-                            initial={{ opacity: 0 }}
-                            whileInView={{ opacity: 1 }}
-                            transition={{ duration: 0.5, delay: 0.3 }}
-                            className="font-mono text-gray-300 text-base sm:text-lg md:text-xl leading-relaxed"
-                        >
-                            {service.description}
-                        </motion.p>
+                    {/* Bottom Row: Description & Capabilities split 50/50 */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-white/10 group-hover:divide-[#08cb00]/25 flex-1 transition-colors duration-500">
+                        
+                        {/* Bottom-Left: Description */}
+                        <div className="p-6 sm:p-8 md:p-10 flex items-center">
+                            <p className="font-mono text-gray-300 text-sm sm:text-base md:text-lg leading-relaxed">
+                                {service.description}
+                            </p>
+                        </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4 pt-3 sm:pt-4 border-t border-white/10">
-                            {service.capabilities.map((cap: string, i: number) => (
-                                <motion.div
-                                    key={i}
-                                    initial={{ opacity: 0, x: 10 }}
-                                    whileInView={{ opacity: 1, x: 0 }}
-                                    transition={{ duration: 0.3, delay: 0.4 + (i * 0.1) }}
-                                    className="flex items-center gap-2 text-xs sm:text-sm text-gray-400 font-mono"
-                                >
-                                    <Check className="w-3 h-3 sm:w-4 sm:h-4 text-[#08cb00] flex-shrink-0" />
-                                    {cap}
-                                </motion.div>
-                            ))}
+                        {/* Bottom-Right: Technical Specs */}
+                        <div className="p-6 sm:p-8 md:p-10 bg-white/[0.01] flex flex-col justify-center">
+                            <h5 className="font-mono text-gray-500 text-[10px] tracking-widest uppercase mb-4 sm:mb-6">
+                                // CAPABILITY_CHECKS
+                            </h5>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {service.capabilities.map((cap: string, i: number) => (
+                                    <div
+                                        key={i}
+                                        className="flex items-center gap-3 text-xs sm:text-sm text-gray-400 font-mono group/item"
+                                    >
+                                        <Check className="w-4 h-4 text-[#08cb00] flex-shrink-0 group-hover/item:scale-110 transition-transform" />
+                                        <span className="group-hover/item:text-white transition-colors">{cap}</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
             </motion.div>
         </div>
-    )
-}
+    );
+};
 
 export const Services = () => {
     const container = useRef(null);
@@ -142,14 +148,10 @@ export const Services = () => {
     });
 
     const [showEffects, setShowEffects] = useState(false);
-    
-    // Only load PixelBlast when the section comes into view
-    // This removes the heavy initialization from the initial page load entirely
     const isInView = useInView(container, { margin: "0px 0px 200px 0px", once: true });
 
     useEffect(() => {
         if (isInView) {
-            // Add a small delay even after view to prioritize smooth scrolling
             const timer = setTimeout(() => {
                 setShowEffects(true);
             }, 500);
@@ -158,42 +160,36 @@ export const Services = () => {
     }, [isInView]);
 
     return (
-        <section ref={container} className="relative bg-black pt-20 pb-20">
-            {/* PixelBlast Background */}
-            <div className="absolute inset-0 z-0">
+        <section id="services" ref={container} className="relative bg-transparent pt-20 pb-20">
+            {/* Wavy Vector Grid Background */}
+            <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
                 {showEffects && (
-                    <PixelBlast
-                        variant="circle"
-                        pixelSize={6}
-                        color="#08cb00"
-                        patternScale={3}
-                        patternDensity={1.2}
-                        pixelSizeJitter={0.5}
-                        enableRipples
-                        rippleSpeed={0.4}
-                        rippleThickness={0.12}
-                        rippleIntensityScale={1.5}
-                        liquid
-                        liquidStrength={0.12}
-                        liquidRadius={1.2}
-                        liquidWobbleSpeed={5}
-                        speed={0.6}
-                        edgeFade={0.25}
-                        transparent
+                    <Waves
+                        lineColor="#08cb00"
+                        backgroundColor="transparent"
+                        waveSpeedX={0.015}
+                        waveSpeedY={0.008}
+                        waveAmpX={30}
+                        waveAmpY={15}
+                        friction={0.95}
+                        tension={0.015}
+                        maxCursorMove={80}
+                        xGap={24}
+                        yGap={24}
                     />
                 )}
             </div>
 
             <div className="relative z-10 mb-16 sm:mb-24 md:mb-32 px-4 sm:px-6 md:px-8 max-w-[95vw] sm:max-w-[90vw] md:max-w-[1400px] mx-auto flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 md:gap-8">
                 <div>
-                    <h2 className="font-heading text-3xl sm:text-4xl md:text-6xl lg:text-[120px] text-white uppercase tracking-tighter leading-[0.85] sm:leading-[0.8]">
-                        The Arsenal
+                    <h2 className="font-heading text-4xl sm:text-6xl md:text-8xl lg:text-[100px] text-white uppercase tracking-tighter leading-[0.85] sm:leading-[0.8]">
+                        <TextReveal text="The Arsenal" />
                     </h2>
                     <div className="w-16 sm:w-24 md:w-32 h-1.5 sm:h-2 bg-[#08cb00] mt-4 sm:mt-5 md:mt-6" />
                 </div>
-                <p className="font-mono text-gray-400 text-lg max-w-sm text-right hidden md:block">
-                    / SYSTEMS DESIGNED FOR<br />
-                    <span className="text-[#08cb00]">TOTAL VELOCITY</span>
+                <p className="font-mono text-gray-400 text-xs sm:text-sm max-w-sm text-right hidden md:block">
+                    // SYSTEMS DESIGNED FOR<br />
+                    <span className="text-[#08cb00] tracking-widest font-bold">TOTAL VELOCITY</span>
                 </p>
             </div>
 
