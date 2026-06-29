@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { Alfa_Slab_One, Roboto } from "next/font/google";
 import "./globals.css";
+import "./animations.css";
 import { NoiseOverlay } from "@/components/layout/NoiseOverlay";
 import { ClientSmoothScroll } from "@/components/layout/ClientSmoothScroll";
 import { ClientPreloader } from "@/components/layout/ClientPreloader";
+import { ClientParticleBackground } from "@/components/layout/ClientParticleBackground";
+import { CreativeEffectsController } from "@/components/layout/CreativeEffectsController";
 
 const alfaSlabOne = Alfa_Slab_One({
   variable: "--font-alfa",
@@ -30,20 +33,23 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
       <body
         className={`${alfaSlabOne.variable} ${roboto.variable} antialiased bg-black`}
       >
-        <ClientSmoothScroll>
-          <ClientPreloader />
-          <NoiseOverlay />
-          {children}
-        </ClientSmoothScroll>
+        <CreativeEffectsController>
+          <ClientSmoothScroll>
+            <ClientPreloader />
+            <ClientParticleBackground />
+            {children}
+          </ClientSmoothScroll>
+        </CreativeEffectsController>
       </body>
     </html>
   );
 }
+

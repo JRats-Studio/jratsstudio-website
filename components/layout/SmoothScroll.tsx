@@ -48,4 +48,3 @@ export const SmoothScroll = ({ children }: { children: ReactNode }) => {
 
     return <>{children}</>;
 };
-
