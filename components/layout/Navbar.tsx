@@ -23,11 +23,13 @@ export const Navbar = () => {
             
             const servicesEl = document.getElementById("services");
             const aboutEl = document.getElementById("about");
+            const projectsEl = document.getElementById("projects");
             const connectEl = document.getElementById("connect");
             
-            if (servicesEl && aboutEl && connectEl) {
+            if (servicesEl && aboutEl && projectsEl && connectEl) {
                 const scrollPos = window.scrollY + 200;
                 if (scrollPos >= connectEl.offsetTop) setActiveSection("connect");
+                else if (scrollPos >= projectsEl.offsetTop) setActiveSection("projects");
                 else if (scrollPos >= aboutEl.offsetTop) setActiveSection("about");
                 else if (scrollPos >= servicesEl.offsetTop) setActiveSection("services");
                 else setActiveSection("");
@@ -75,7 +77,7 @@ export const Navbar = () => {
                 animate={{ y: 0 }}
                 transition={{ duration: 0.8, ease: "easeOut", delay: 1.5 }}
                 className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${
-                    isScrolled ? "bg-black/80 backdrop-blur-md border-b border-[#08cb00]/20 py-4 shadow-[0_4px_30px_rgba(8,203,0,0.1)] mt-1" : "bg-transparent py-6 mt-1"
+                    isScrolled ? "bg-[#000300]/60 backdrop-blur-xl border-b border-white/5 py-4 shadow-[0_8px_30px_rgba(8,203,0,0.03)] mt-1" : "bg-transparent py-6 mt-1"
                 }`}
             >
                 <div className="max-w-7xl mx-auto px-6 md:px-12 flex items-center justify-between">
@@ -100,6 +102,7 @@ export const Navbar = () => {
                     <div className="hidden md:flex gap-8 font-mono text-xs tracking-[0.2em] uppercase items-center">
                         <a href="#services" onClick={(e) => handleScroll(e, 'services')} className={`transition-colors duration-300 hover-target ${activeSection === 'services' ? 'text-[#08cb00]' : 'text-gray-400 hover:text-[#08cb00]'}`}>Services</a>
                         <a href="#about" onClick={(e) => handleScroll(e, 'about')} className={`transition-colors duration-300 hover-target ${activeSection === 'about' ? 'text-[#08cb00]' : 'text-gray-400 hover:text-[#08cb00]'}`}>About</a>
+                        <a href="#projects" onClick={(e) => handleScroll(e, 'projects')} className={`transition-colors duration-300 hover-target ${activeSection === 'projects' ? 'text-[#08cb00]' : 'text-gray-400 hover:text-[#08cb00]'}`}>Projects</a>
                         <MagneticButton strength={30}>
                             <a href="#connect" onClick={(e) => handleScroll(e, 'connect')} className={`transition-colors duration-300 border px-4 py-2 rounded-full hover:bg-[#08cb00]/10 hover-target ${activeSection === 'connect' ? 'text-white border-[#08cb00] bg-[#08cb00]/10 shadow-[0_0_15px_rgba(8,203,0,0.2)]' : 'text-[#08cb00] border-[#08cb00]/30 hover:border-[#08cb00] hover:text-white hover:shadow-[0_0_15px_rgba(8,203,0,0.2)]'}`}>Connect</a>
                         </MagneticButton>
@@ -123,10 +126,11 @@ export const Navbar = () => {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: "-100%" }}
                         transition={{ duration: 0.4, ease: "easeInOut" }}
-                        className="fixed inset-0 z-[90] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center gap-10"
+                        className="fixed inset-0 z-[90] bg-[#000300]/95 backdrop-blur-xl flex flex-col items-center justify-center gap-10"
                     >
                         <a href="#services" onClick={(e) => handleScroll(e, 'services')} className={`font-heading text-4xl uppercase tracking-wider transition-colors duration-300 hover-target ${activeSection === 'services' ? 'text-[#08cb00]' : 'text-white hover:text-[#08cb00]'}`}>Services</a>
                         <a href="#about" onClick={(e) => handleScroll(e, 'about')} className={`font-heading text-4xl uppercase tracking-wider transition-colors duration-300 hover-target ${activeSection === 'about' ? 'text-[#08cb00]' : 'text-white hover:text-[#08cb00]'}`}>About</a>
+                        <a href="#projects" onClick={(e) => handleScroll(e, 'projects')} className={`font-heading text-4xl uppercase tracking-wider transition-colors duration-300 hover-target ${activeSection === 'projects' ? 'text-[#08cb00]' : 'text-white hover:text-[#08cb00]'}`}>Projects</a>
                         <a href="#connect" onClick={(e) => handleScroll(e, 'connect')} className={`font-heading text-4xl uppercase tracking-wider transition-colors duration-300 hover-target ${activeSection === 'connect' ? 'text-white' : 'text-[#08cb00] hover:text-white'}`}>Connect</a>
                     </motion.div>
                 )}

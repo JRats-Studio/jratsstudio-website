@@ -1,5 +1,7 @@
 "use client";
-
+import PixelTransition from "@/components/effects/PixelTransition";
+import SplitText from "@/components/effects/SplitText";
+import DecryptedSplitText from "@/components/effects/DecryptedSplitText";
 import { motion, useScroll, useTransform, useInView, MotionValue } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
@@ -73,9 +75,17 @@ const ServiceCard = ({ service, index, range, targetScale, progress }: ServiceCa
                 style={{ scale, top: `calc(-5vh + ${index * 25}px)` }}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
-                className="relative flex flex-col h-auto min-h-[500px] sm:min-h-[550px] md:h-[600px] w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-[1400px] rounded-2xl sm:rounded-3xl origin-top bg-black border border-white/10 hover:border-[#08cb00]/50 hover:shadow-[0_0_30px_rgba(8,203,0,0.15)] transition-all duration-500 overflow-hidden group"
+                className="relative flex flex-col h-auto min-h-[500px] sm:min-h-[550px] md:h-[600px] w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-[1400px] rounded-2xl sm:rounded-3xl origin-top bg-white/[0.01] backdrop-blur-xl border border-white/10 hover:border-[#08cb00]/50 hover:shadow-[0_0_30px_rgba(8,203,0,0.15)] transition-all duration-500 overflow-hidden group"
             >
-                {/* Tech Corner Brackets - Expand and turn green on hover */}
+                {/* Glossy Sheen Sweep Overlay */}
+                <motion.div
+                    initial={{ x: "-100%" }}
+                    animate={isHovered ? { x: "200%" } : { x: "-100%" }}
+                    transition={{ duration: 0.8, ease: "easeInOut" }}
+                    className="absolute inset-0 pointer-events-none z-10 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12"
+                />
+
+                {/* Tech Corner Brackets */}
                 <div className="absolute top-0 left-0 w-5 h-5 border-t border-l border-white/15 group-hover:border-[#08cb00]/70 group-hover:w-8 group-hover:h-8 transition-all duration-500 rounded-tl-2xl sm:rounded-tl-3xl pointer-events-none z-20" />
                 <div className="absolute top-0 right-0 w-5 h-5 border-t border-r border-white/15 group-hover:border-[#08cb00]/70 group-hover:w-8 group-hover:h-8 transition-all duration-500 rounded-tr-2xl sm:rounded-tr-3xl pointer-events-none z-20" />
                 <div className="absolute bottom-0 left-0 w-5 h-5 border-b border-l border-white/15 group-hover:border-[#08cb00]/70 group-hover:w-8 group-hover:h-8 transition-all duration-500 rounded-bl-2xl sm:rounded-bl-3xl pointer-events-none z-20" />
@@ -95,7 +105,7 @@ const ServiceCard = ({ service, index, range, targetScale, progress }: ServiceCa
                             </h2>
                         </div>
                         
-                        {/* Technical Icon Box (Increased size & alignment) */}
+                        {/* Technical Icon Box */}
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             whileInView={{ opacity: 1, scale: 1 }}
@@ -182,10 +192,10 @@ export const Services = () => {
 
             <div className="relative z-10 mb-16 sm:mb-24 md:mb-32 px-4 sm:px-6 md:px-8 max-w-[95vw] sm:max-w-[90vw] md:max-w-[1400px] mx-auto flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 md:gap-8">
                 <div>
-                    <h2 className="font-heading text-4xl sm:text-6xl md:text-8xl lg:text-[100px] text-white uppercase tracking-tighter leading-[0.85] sm:leading-[0.8]">
-                        <TextReveal text="The Arsenal" />
-                    </h2>
-                    <div className="w-16 sm:w-24 md:w-32 h-1.5 sm:h-2 bg-[#08cb00] mt-4 sm:mt-5 md:mt-6" />
+                <h2 className="font-heading text-4xl sm:text-6xl md:text-8xl lg:text-[100px] text-white uppercase tracking-tighter leading-[0.85] sm:leading-[0.8]">
+                    <DecryptedSplitText text="The Arsenal" charDelay={35} scrambleDuration={300} />
+                </h2>
+                <div className="w-16 sm:w-24 md:w-32 h-1.5 sm:h-2 bg-[#08cb00] mt-4 sm:mt-5 md:mt-6" />
                 </div>
                 <p className="font-mono text-gray-400 text-xs sm:text-sm max-w-sm text-right hidden md:block">
                     // SYSTEMS DESIGNED FOR<br />

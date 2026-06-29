@@ -25,17 +25,17 @@
 
 :root {
   --radius: 0.625rem;
-  --background: #000000;
+  --background: #000300;
   --foreground: #ffffff;
   --primary: #08cb00;
   --primary-foreground: #000000;
-  --secondary: #253900;
+  --secondary: #042b00;
   --secondary-foreground: #ffffff;
-  --muted: #1a1a1a;
-  --muted-foreground: #a1a1aa;
-  --accent: #253900;
+  --muted: #010c03;
+  --muted-foreground: #94a3b8;
+  --accent: #053b00;
   --accent-foreground: #ffffff;
-  --border: #253900;
+  --border: rgba(255, 255, 255, 0.08);
   --ring: #08cb00;
 }
 
@@ -46,18 +46,20 @@
 
   body {
     @apply bg-background text-foreground;
-    cursor: url('/cursor.svg') 4 4, auto;
   }
-  
-  a, button, .hover-target {
-    cursor: pointer;
+
+  /* Hide default cursor on desktop when using the custom Target Sights */
+  @media (min-width: 768px) {
+    body, a, button, [role="button"], input, textarea, select {
+      cursor: none !important;
+    }
   }
 }
 
-/* Custom Hacker Text Selection */
+/* Custom Cosmic Text Selection */
 ::selection {
-  background: #08cb00;
-  color: #000000;
+  background: rgba(8, 203, 0, 0.25);
+  color: #ffffff;
 }
 
 /* Override browser autofill background in dark mode */
@@ -68,6 +70,6 @@ textarea:-webkit-autofill,
 textarea:-webkit-autofill:hover,
 textarea:-webkit-autofill:focus {
   -webkit-text-fill-color: #ffffff !important;
-  -webkit-box-shadow: 0 0 0px 1000px #000000 inset !important;
+  -webkit-box-shadow: 0 0 0px 1000px #000300 inset !important;
   transition: background-color 5000s ease-in-out 0s;
 }

@@ -1,6 +1,8 @@
 "use client";
-
+import DecryptedSplitText from "@/components/effects/DecryptedSplitText";
+import SplitText from "@/components/effects/SplitText";
 import LogoLoop from '@/components/display/LogoLoop';
+import dynamic from "next/dynamic";
 import Waves from '@/components/effects/Waves';
 import { SiReact, SiNextdotjs, SiTypescript, SiTailwindcss, SiOpenai, SiPython, SiNodedotjs, SiGraphql, SiMongodb, SiPostgresql } from 'react-icons/si';
 import { motion } from "framer-motion";
@@ -24,7 +26,8 @@ const techLogos = [
 
 export const AboutFrameworksSplit = () => {
     return (
-        <section id="about" className="bg-transparent relative overflow-hidden">            {/* Waves Background */}
+        <section id="about" className="bg-transparent relative overflow-hidden">
+            {/* Waves Background */}
             <Waves
                 lineColor="#08cb00"
                 backgroundColor="transparent"
@@ -37,12 +40,12 @@ export const AboutFrameworksSplit = () => {
                 maxCursorMove={120}
                 xGap={12}
                 yGap={36}
-                className="z-0 opacity-30"
+                className="z-0 opacity-35"
             />
 
             <div className="relative z-10">
                 {/* Tech Stack + Logo Loop */}
-                <div className="bg-black/80 relative z-20 py-8 sm:py-10 md:py-12 border-t border-b border-white/5">
+                <div className="bg-[#000300]/40 backdrop-blur-xl relative z-20 py-8 sm:py-10 md:py-12 border-t border-b border-white/5">
                     <p className="font-heading text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl uppercase tracking-wider text-center mb-6 sm:mb-8">
                         <TextReveal text="POWERED BY" />
                     </p>
@@ -55,7 +58,7 @@ export const AboutFrameworksSplit = () => {
                         scaleOnHover
                         pauseOnHover
                         fadeOut
-                        fadeOutColor="#000000"
+                        fadeOutColor="#000300"
                     />
                 </div>
 
@@ -69,44 +72,50 @@ export const AboutFrameworksSplit = () => {
                             duration: 0.8,
                             ease: [0.16, 1, 0.3, 1]
                         }}
-                        className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[1000px] mx-auto bg-black/90 backdrop-blur-md rounded-2xl sm:rounded-3xl border border-white/10 hover:border-[#08cb00]/50 hover:shadow-[0_0_30px_rgba(8,203,0,0.15)] transition-all duration-500 p-4 sm:p-8 md:p-12 lg:p-16 flex flex-col justify-center relative overflow-hidden"
+                        className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[1000px] mx-auto bg-white/[0.01] backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-white/10 hover:border-[#08cb00]/50 hover:shadow-[0_0_30px_rgba(8,203,0,0.15)] transition-all duration-500 p-4 sm:p-8 md:p-12 lg:p-16 flex flex-col justify-center relative overflow-hidden"
                     >
                         {/* Background Gradients */}
                         <div className="absolute top-0 right-0 w-[200px] h-[200px] sm:w-[300px] sm:h-[300px] md:w-[500px] md:h-[500px] bg-[#08cb00]/5 rounded-full blur-[60px] sm:blur-[80px] md:blur-[120px] pointer-events-none" />
 
-                        <div className="relative z-10 max-w-3xl">
-                            <motion.h4
-                                initial={{ opacity: 0, x: -30 }}
-                                whileInView={{ opacity: 1, x: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: 0.2, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                                className="font-mono text-[#08cb00] text-xs sm:text-sm tracking-widest uppercase mb-4 sm:mb-6"
-                            >
-                                / WHO WE ARE
-                            </motion.h4>
+                        <div className="relative z-10 max-w-3xl mx-auto">
+                            {/* Left Column: Text Details */}
+                            <div>
+                                <motion.h4
+                                    initial={{ opacity: 0, x: -30 }}
+                                    whileInView={{ opacity: 1, x: 0 }}
+                                    viewport={{ once: true }}
+                                    transition={{ delay: 0.2, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                                    className="font-mono text-[#08cb00] text-xs sm:text-sm tracking-widest uppercase mb-4 sm:mb-6"
+                                >
+                                    / WHO WE ARE
+                                </motion.h4>
 
-                            <h2 className="font-heading text-2xl sm:text-3xl md:text-4xl lg:text-6xl text-white uppercase leading-none mb-4 sm:mb-6 md:mb-8">
-                                <TextReveal text="Hackers of the" /><br />
-                                <span className="text-[#08cb00]"><TextReveal text="Humdrum." delay={0.2} /></span>
-                            </h2>
+                                <h2 className="font-heading text-2xl sm:text-3xl md:text-4xl lg:text-6xl text-white uppercase leading-none mb-4 sm:mb-6 md:mb-8">
+                                    <DecryptedSplitText text="Hackers of the" charDelay={20} />
+                                    <br />
+                                    <span className="text-[#08cb00]">
+                                        <DecryptedSplitText text="Humdrum." charDelay={20} />
+                                    </span>
+                                </h2>
 
-                            <motion.div
-                                initial={{ opacity: 0, y: 30 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: 0.5, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-                                className="space-y-4 sm:space-y-5 md:space-y-6 text-gray-400 font-mono text-sm sm:text-base md:text-lg leading-relaxed"
-                            >
-                                <p>
-                                    We build digital products that stir emotions and drive results. In an era where AI threatens to flatten creativity into sameness, we ensure the human spark stays at the center of everything we create.
-                                </p>
-                                <p>
-                                    Our approach is simple: automate the repetitive, amplify the creative. We leverage cutting-edge AI and modern technology stacks not to replace human insight, but to free it. Every solution we deliver is crafted with precision, purpose, and an obsessive attention to what makes technology feel alive.
-                                </p>
-                                <p>
-                                    No templates. No shortcuts. Just intentional, human-powered innovation fused with intelligent automation.
-                                </p>
-                            </motion.div>
+                                <motion.div
+                                    initial={{ opacity: 0, y: 30 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true }}
+                                    transition={{ delay: 0.5, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                                    className="space-y-4 sm:space-y-5 md:space-y-6 text-gray-400 font-mono text-sm sm:text-base md:text-lg leading-relaxed"
+                                >
+                                    <p>
+                                        We build digital products that stir emotions and drive results. In an era where AI threatens to flatten creativity into sameness, we ensure the human spark stays at the center of everything we create.
+                                    </p>
+                                    <p>
+                                        Our approach is simple: automate the repetitive, amplify the creative. We leverage cutting-edge AI and modern technology stacks not to replace human insight, but to free it. Every solution we deliver is crafted with precision, purpose, and an obsessive attention to what makes technology feel alive.
+                                    </p>
+                                    <p>
+                                        No templates. No shortcuts. Just intentional, human-powered innovation fused with intelligent automation.
+                                    </p>
+                                </motion.div>
+                            </div>
                         </div>
                     </motion.div>
                 </div>

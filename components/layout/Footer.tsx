@@ -36,7 +36,7 @@ export const Footer = () => {
     }, []);
 
     return (
-        <footer id="connect" ref={containerRef} className="bg-black text-white relative border-t border-white/10 overflow-hidden flex flex-col justify-between pt-12 sm:pt-20">
+        <footer id="connect" ref={containerRef} className="bg-[#000300]/80 backdrop-blur-xl text-white relative border-t border-white/10 overflow-hidden flex flex-col justify-between pt-12 sm:pt-20">
             
             {/* Top Grid Content */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 w-full max-w-7xl mx-auto px-6 md:px-12 z-10 relative">
@@ -214,10 +214,10 @@ export const Footer = () => {
             </div>
 
             {/* Sleek Infinite Scrolling Marquee */}
-            <div className="w-full overflow-hidden border-t border-b border-[#08cb00]/20 py-4 my-8 relative flex bg-black/80">
+            <div className="w-full overflow-hidden border-t border-b border-[#08cb00]/10 py-4 my-8 relative flex bg-[#000300]/40 backdrop-blur-xl">
                 
                 {/* Subtle Neon Green Glow */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#08cb00]/10 to-transparent z-0 pointer-events-none"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#08cb00]/5 to-transparent z-0 pointer-events-none"></div>
                 
                 {/* Static Noise Texture */}
                 <div 
@@ -253,7 +253,7 @@ export const Footer = () => {
             </div>
 
             {/* Copyright Bar */}
-            <div className="w-full border-t border-white/10 px-6 py-6 z-10 bg-black relative">
+            <div className="w-full border-t border-white/10 px-6 py-6 z-10 bg-[#000300]/80 backdrop-blur-xl relative">
                 <div className="max-w-7xl mx-auto flex justify-center items-center">
                     <p className="text-gray-500 text-xs font-mono uppercase tracking-widest">
                         &copy; {new Date().getFullYear()} JRATS STUDIO. ALL RIGHTS RESERVED.

@@ -1,18 +1,20 @@
+import TargetCursor from "@/components/ui/TargetCursor";
+import ClickSpark from "@/components/effects/ClickSpark";
 import type { Metadata } from "next";
-import { Alfa_Slab_One, Roboto } from "next/font/google";
+import { Outfit, Inter } from "next/font/google";
 import "./globals.css";
 import { NoiseOverlay } from "@/components/layout/NoiseOverlay";
 import { ClientSmoothScroll } from "@/components/layout/ClientSmoothScroll";
 import { ClientPreloader } from "@/components/layout/ClientPreloader";
 
-const alfaSlabOne = Alfa_Slab_One({
-  variable: "--font-alfa",
+const outfit = Outfit({
+  variable: "--font-alfa", // Kept mapping to prevent Tailwind theme changes
   subsets: ["latin"],
-  weight: "400",
+  weight: ["400", "700", "900"],
   display: "swap",
 });
 
-const roboto = Roboto({
+const inter = Inter({
   variable: "--font-roboto",
   subsets: ["latin"],
   weight: ["400", "700"],
@@ -33,8 +35,8 @@ export const metadata: Metadata = {
   },
 };
 
-import { Navbar } from "@/components/layout/Navbar";
-import { TechnicalGrid } from "@/components/effects/TechnicalGrid";
+import { CosmicBackground } from "@/components/effects/CosmicBackground";
+import { Dock } from "@/components/ui/Dock";
 
 export default function RootLayout({
   children,
@@ -44,13 +46,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${alfaSlabOne.variable} ${roboto.variable} antialiased bg-black`}
+        className={`${outfit.variable} ${inter.variable} antialiased bg-black`}
       >
+        <TargetCursor />
+        <ClickSpark />
+        <Dock />
+
         <ClientSmoothScroll>
           <ClientPreloader />
-          <TechnicalGrid />
+          <CosmicBackground />
           <NoiseOverlay />
-          <Navbar />
           {children}
         </ClientSmoothScroll>
       </body>
